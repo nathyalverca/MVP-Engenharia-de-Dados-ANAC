@@ -586,8 +586,6 @@ Este MVP implementou um pipeline de dados ponta a ponta completo, cobrindo desde
 
 ### 7.4 Nota de Autoavaliação
 
-Considero que este MVP cumpre todos os requisitos obrigatórios da disciplina: o pipeline é funcional e reprodutível do início ao fim, a arquitetura Medallion está corretamente implementada, o modelo dimensional atende às necessidades analíticas propostas, e as 5 perguntas de negócio são respondidas com evidências nos dados.
-
 O principal desafio técnico enfrentado foi o tratamento dos nomes de colunas com acentos — resolvido com uma função de normalização Unicode reutilizável. O segundo desafio foi a recriação das tabelas Gold que não haviam sido persistidas corretamente, evidenciando a importância de validar cada etapa do pipeline com `SHOW TABLES` e contagens de registros.
 
 ---
