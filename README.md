@@ -297,6 +297,8 @@ CSV → Delta Limpeza + DQ Modelo Estrela SQL Analytics
 
 ### 4.2 Notebook 01 — Ingestão Bronze
 
+📄 [Ver notebook no GitHub](notebooks/01_ingestao_bronze.ipynb)
+
 **Objetivo:** carregar o CSV bruto da ANAC e persistir como tabela Delta Lake na camada Bronze.
 
 **Etapas:**
@@ -309,6 +311,8 @@ CSV → Delta Limpeza + DQ Modelo Estrela SQL Analytics
 ![Ingestão Bronze executada — Tabela bronze_voos salva com sucesso](images/03_bronze_sucesso.png)
 
 ### 4.3 Notebook 02 — Transformação Silver
+
+📄 [Ver notebook no GitHub](notebooks/02_transformacao_silver.ipynb)
 
 **Objetivo:** limpar, padronizar e preparar os dados para modelagem dimensional.
 
@@ -340,6 +344,8 @@ return limpo.upper()
 
 ### 4.4 Notebook 03 — Modelagem Gold
 
+📄 [Ver notebook no GitHub](notebooks/03_gold_modelagem.ipynb)
+
 **Objetivo:** construir o modelo dimensional em estrela para suportar análises de negócio.
 
 **Etapas:**
@@ -358,6 +364,8 @@ SHOW TABLES LIKE 'gold*'
 ![SHOW TABLES — tabelas Gold criadas com sucesso](images/02_gold_show_tables.png)
 
 ### 4.5 Notebook 04 — Análises
+
+📄 [Ver notebook no GitHub](notebooks/04_analises.ipynb)
 
 **Objetivo:** responder às 5 perguntas de negócio com consultas SQL sobre as tabelas Gold.
 
