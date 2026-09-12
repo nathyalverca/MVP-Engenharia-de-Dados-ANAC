@@ -2,7 +2,7 @@
 
 **Nome:** Nathália Alverca Martello Coelho  
 **Matrícula:** 4052024002336  
-**Curso:** Engenharia de Dados — PUC-Rio  
+**Disciplina:** Engenharia de Dados  
 **Data:** 12/09/2026  
 **Dataset:** Dados Estatísticos do Transporte Aéreo — ANAC (10 anos) — [Link](https://www.gov.br/anac/pt-br/assuntos/dados-e-estatisticas/dados-estatisticos)  
 **Plataforma:** Databricks Free Edition  
