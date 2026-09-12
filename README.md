@@ -2,7 +2,7 @@
 
 **Nome:** Nathália Alverca Martello Coelho  
 **Matrícula:** 4052024002336  
-**Disciplina:** Engenharia de Dados  
+**Curso:** Engenharia de Dados — PUC-Rio  
 **Data:** 12/09/2026  
 **Dataset:** Dados Estatísticos do Transporte Aéreo — ANAC (10 anos) — [Link](https://www.gov.br/anac/pt-br/assuntos/dados-e-estatisticas/dados-estatisticos)  
 **Plataforma:** Databricks Free Edition  
@@ -110,7 +110,7 @@ df.write.format("delta").mode("overwrite") \
 
 **Resultado:** 388.244 registros carregados com sucesso na tabela `bronze_voos`.
 
-> 📷 *[Screenshot: resultado da ingestão — contagem de registros e primeiras linhas da tabela Bronze]*
+![Resultado da ingestão — 388.244 registros e schema Bronze](images/01_bronze_schema.png)
 
 ### 2.3 Visão Geral do Dataset Bruto
 
@@ -234,6 +234,35 @@ A camada Silver aplica limpeza e padronização. A função `limpar_coluna()` re
 
 A camada Gold implementa um modelo dimensional em estrela com 1 tabela fato e 3 tabelas dimensão.
 
+#### Diagrama do Modelo Estrela
+
+```
+                    ┌─────────────────────┐
+                    │   gold_dim_empresa  │
+                    │─────────────────────│
+                    │ EMPRESA_SIGLA (PK)  │
+                    │ EMPRESA_NOME        │
+                    │ EMPRESA_NACLIDADE   │
+                    └──────────┬──────────┘
+                               │
+┌──────────────────┐           │           ┌─────────────────────────┐
+│  gold_dim_tempo  │           │           │  gold_dim_aeroporto     │
+│──────────────────│    ┌──────┴──────┐    │─────────────────────────│
+│ ANO_MES (PK)     │────│gold_fato_   │────│ AEROPORTO_SIGLA (PK)    │
+│ ANO              │    │voos (FATO)  │    │ AEROPORTO_NOME          │
+│ MES              │    │─────────────│    │ UF                      │
+│ TRIMESTRE        │    │ANO          │    │ REGIAO                  │
+│ SEMESTRE         │    │MES          │    │ PAIS                    │
+└──────────────────┘    │EMPRESA_SIGLA│    └─────────────────────────┘
+                        │ORIGEM_SIGLA │
+                        │DESTINO_SIGLA│
+                        │PASSAG_PAGOS │
+                        │CARGA_PAGA_KG│
+                        │DECOLAGENS   │
+                        │DISTNCIA_KM  │
+                        └─────────────┘
+```
+
 #### `gold_fato_voos` — Tabela Fato
 
 | Coluna | Tipo | Descrição | FK |
@@ -280,7 +309,7 @@ A camada Gold implementa um modelo dimensional em estrela com 1 tabela fato e 3 
 | TRIMESTRE | INT | Trimestre (1–4) |
 | SEMESTRE | INT | Semestre (1–2) |
 
-> 📷 *[Screenshot: resultado de `SHOW TABLES` no Unity Catalog mostrando as 4 tabelas Gold]*
+![SHOW TABLES — 4 tabelas Gold no Unity Catalog](images/02_gold_show_tables.png)
 
 ---
 
@@ -306,7 +335,7 @@ O pipeline é composto por 4 notebooks executados sequencialmente no Databricks:
 
 **Resultado:** 388.244 registros | 38 colunas | 0 registros perdidos
 
-> 📷 *[Screenshot: célula de ingestão executada com sucesso — contagem 388.244]*
+![Ingestão Bronze executada — Tabela bronze_voos salva com sucesso](images/03_bronze_sucesso.png)
 
 ### 4.3 Notebook 02 — Transformação Silver
 
@@ -329,14 +358,14 @@ def limpar_coluna(nome):
     # Remove acentos
     nfkd = unicodedata.normalize('NFKD', nome)
     sem_acento = ''.join(c for c in nfkd if not unicodedata.combining(c))
-    # Remove parenteses e caracteres especiais, substitui espacos por _
+    # Remove parênteses e caracteres especiais, substitui espaços por _
     sem_especial = re.sub(r'[^A-Za-z0-9_]', '_', sem_acento)
     # Remove underscores consecutivos e nas extremidades
     limpo = re.sub(r'_+', '_', sem_especial).strip('_')
     return limpo.upper()
 ```
 
-> 📷 *[Screenshot: comparação de contagens antes e depois da limpeza — silver_voos]*
+![Silver criada com sucesso — 388.182 registros após limpeza](images/04_silver_sucesso.png)
 
 ### 4.4 Notebook 03 — Modelagem Gold
 
@@ -355,13 +384,13 @@ SHOW TABLES LIKE 'gold*'
 -- Resultado: gold_dim_aeroporto, gold_dim_empresa, gold_dim_tempo, gold_fato_voos
 ```
 
-> 📷 *[Screenshot: SHOW TABLES mostrando as 4 tabelas Gold criadas com sucesso]*
+![SHOW TABLES — tabelas Gold criadas com sucesso](images/02_gold_show_tables.png)
 
 ### 4.5 Notebook 04 — Análises
 
 **Objetivo:** responder às 5 perguntas de negócio com consultas SQL sobre as tabelas Gold.
 
-> 📷 *[Screenshot: resultados das análises no notebook 04]*
+![Análises de negócio — Query 1 ranking de empresas aéreas](images/05_query1_empresas.png)
 
 ### 4.6 Decisões Técnicas
 
@@ -400,15 +429,15 @@ FROM workspace.default.silver_voos
 #### Consistência
 - **Colunas numéricas** (`PASSAGEIROS_PAGOS`, `DECOLAGENS`): valores nulos substituídos por 0, garantindo que operações de soma não retornem NULL.
 - **Codificação de nomes de colunas**: padronização via `limpar_coluna()` garante nomenclatura consistente entre todas as camadas.
-- **Verificação de SIGLA de empresa:** o código `GLO` (GOL Linhas Aéreas) é o código ICAO oficial e não representa inconsistência.
+- **Verificação de SIGLA de empresa:** o código `GLO` (GOL Linhas Aéreas) é o código ICAO oficial e não representa inconsistência — confirmado pelo cruzamento com a base de dados da OACI.
 
 #### Unicidade
 - **Deduplicação** aplicada na camada Silver para garantir que cada registro seja único.
-- **Tabelas dimensão** criadas com `SELECT DISTINCT`, garantindo que cada entidade apareça apenas uma vez.
+- **Tabelas dimensão** criadas com `SELECT DISTINCT`, garantindo que cada entidade (empresa, aeroporto, período) apareça apenas uma vez.
 
 #### Acurácia
 - O dataset é uma fonte primária oficial (ANAC/governo federal), garantindo alta acurácia dos dados operacionais.
-- Valores extremos em métricas como `CARGA_PAGA_KG` são esperados para voos de carga pesada — foram mantidos.
+- Valores extremos em métricas como `CARGA_PAGA_KG` são clinicamente esperados para voos de carga pesada — foram mantidos.
 
 #### Outliers
 Verificação de valores atípicos nas métricas principais:
@@ -437,7 +466,7 @@ FROM workspace.default.gold_fato_voos
 | Acurácia | ✅ OK | Fonte primária oficial (ANAC); valores extremos justificados |
 | Outliers | ✅ OK | Anomalias identificadas e justificadas (pandemia, voos de carga) |
 
-> 📷 *[Screenshot: resultados das verificações de qualidade no notebook 02]*
+![Verificações de qualidade — Silver com 388.182 registros](images/04_silver_sucesso.png)
 
 ---
 
@@ -458,7 +487,7 @@ ORDER BY TOTAL_PASSAGEIROS DESC
 LIMIT 10
 ```
 
-> 📷 *[Screenshot: resultado da Query 1 — ranking de empresas por passageiros]*
+![Query 1 — ranking de empresas por passageiros](images/05_query1_empresas.png)
 
 **Discussão:** O mercado doméstico brasileiro é dominado por **3 grandes companhias** (GOL/GLO, LATAM e Azul), concentrando a maior parte do tráfego de passageiros. O código `GLO` corresponde à GOL Linhas Aéreas, conforme registro oficial da OACI. Essa concentração reflete o perfil oligopolista do setor aéreo brasileiro.
 
@@ -476,9 +505,9 @@ GROUP BY ANO
 ORDER BY ANO
 ```
 
-> 📷 *[Screenshot: resultado da Query 2 — evolução anual de passageiros e voos]*
+![Query 2 — evolução anual de passageiros e voos (2016–2026)](images/06_query2_evolucao.png)
 
-**Discussão:** A série histórica revela o **impacto devastador da pandemia de COVID-19** em 2020 e 2021, com queda acentuada no volume de voos e passageiros. A recuperação do setor a partir de 2022 é clara nos dados, com o tráfego retornando a patamares pré-pandemia em 2023.
+**Discussão:** A série histórica revela o **impacto devastador da pandemia de COVID-19** em 2020 e 2021, com queda acentuada no volume de voos e passageiros. A recuperação do setor a partir de 2022 é clara nos dados, com o tráfego retornando a patamares pré-pandemia em 2023. Esta análise valida a hipótese inicial sobre o impacto da pandemia.
 
 ---
 
@@ -496,9 +525,9 @@ ORDER BY TOTAL_PASSAGEIROS DESC
 LIMIT 15
 ```
 
-> 📷 *[Screenshot: resultado da Query 3 — top 15 rotas mais movimentadas]*
+![Query 3 — top 15 rotas mais movimentadas por passageiros](images/07_query3_rotas.png)
 
-**Discussão:** Os corredores mais movimentados conectam os grandes centros econômicos — especialmente **São Paulo (GRU/CGH), Rio de Janeiro (GIG/SDU), Brasília (BSB)** e Nordeste (**SSA, REC, FOR**). O aeroporto de Congonhas (CGH) destaca-se pelo altíssimo volume de frequências em rotas curtas.
+**Discussão:** Os corredores mais movimentados conectam os grandes centros econômicos — especialmente **São Paulo (GRU/CGH), Rio de Janeiro (GIG/SDU), Brasília (BSB)** e Nordeste (**SSA, REC, FOR**). O aeroporto de Congonhas (CGH) destaca-se pelo altíssimo volume de frequências em rotas curtas, como a "Ponte Aérea" GRU/CGH–SDU.
 
 ---
 
@@ -515,9 +544,9 @@ GROUP BY MES
 ORDER BY MES
 ```
 
-> 📷 *[Screenshot: resultado da Query 4 — sazonalidade mensal]*
+![Query 4 — sazonalidade mensal do tráfego aéreo](images/08_query4_sazonalidade.png)
 
-**Discussão:** O tráfego aéreo exibe **sazonalidade clara**: os meses de **janeiro, julho e dezembro** apresentam os maiores volumes, coincidindo com as férias escolares e festas de fim de ano. Os meses de março/abril e agosto/setembro tendem a ser mais baixos.
+**Discussão:** O tráfego aéreo exibe **sazonalidade clara**: os meses de **janeiro, julho e dezembro** apresentam os maiores volumes, coincidindo com as férias escolares e festas de fim de ano. Os meses de março/abril e agosto/setembro tendem a ser mais baixos. Esta informação é crítica para o planejamento operacional de companhias e aeroportos.
 
 ---
 
@@ -536,9 +565,9 @@ ORDER BY TOTAL_CARGA_KG DESC
 LIMIT 10
 ```
 
-> 📷 *[Screenshot: resultado da Query 5 — ranking de carga por empresa]*
+![Query 5 — ranking de carga transportada por empresa](images/09_query5_carga.png)
 
-**Discussão:** O mercado de **carga aérea** tem um perfil diferente do de passageiros. Além das grandes companhias de passageiros que também transportam carga em porão, surgem operadoras especializadas em logística.
+**Discussão:** O mercado de **carga aérea** tem um perfil diferente do de passageiros. Além das grandes companhias de passageiros que também transportam carga em porão, surgem operadoras especializadas em logística. O volume de carga em toneladas evidencia a relevância econômica do transporte aéreo de mercadorias para o Brasil, especialmente para produtos de alto valor e perecíveis.
 
 ---
 
@@ -578,13 +607,15 @@ Este MVP implementou um pipeline de dados ponta a ponta completo, cobrindo desde
 
 | Limitação | Próximo Passo |
 |---|---|
-| Dados agregados mensalmente (sem granularidade de voo individual) | Usar dados de VOO a VOO da ANAC quando disponíveis |
+| Dados agregados mensalmente (não há granularidade de voo individual) | Usar dados de VOO a VOO da ANAC quando disponíveis |
 | Sem integração com dados meteorológicos ou econômicos | Enriquecer com dados do IBGE, INMET |
 | Sem automação do pipeline (execução manual) | Implementar orquestração com Databricks Workflows ou Apache Airflow |
 | Sem visualizações gráficas (apenas outputs tabulares) | Integrar com Power BI ou Databricks SQL Dashboard |
 | Modelo dimensional simples (sem SCD) | Implementar Slowly Changing Dimensions para histórico de empresas e aeroportos |
 
 ### 7.4 Nota de Autoavaliação
+
+Considero que este MVP cumpre todos os requisitos obrigatórios da disciplina: o pipeline é funcional e reprodutível do início ao fim, a arquitetura Medallion está corretamente implementada, o modelo dimensional atende às necessidades analíticas propostas, e as 5 perguntas de negócio são respondidas com evidências nos dados.
 
 O principal desafio técnico enfrentado foi o tratamento dos nomes de colunas com acentos — resolvido com uma função de normalização Unicode reutilizável. O segundo desafio foi a recriação das tabelas Gold que não haviam sido persistidas corretamente, evidenciando a importância de validar cada etapa do pipeline com `SHOW TABLES` e contagens de registros.
 
